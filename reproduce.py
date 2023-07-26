@@ -21,11 +21,21 @@ from trlx.models.modeling_ppo import PPOConfig
 
 
 
+task='autodl-tmp/BIG-Bench-Hard/bbh/penguins_in_a_table.json'
+
+
+
+
+
+
+
+
+
 
 default_config = TRLConfig(
     train=TrainConfig(
         seq_length=512,
-        epochs=50,
+        epochs=100,
         total_steps=6000,
         # gradient accummulation=4 via deepspeed
         batch_size=16,
@@ -103,9 +113,11 @@ def main(hparams={}):
     ### reward_se
     def reward_se( prompts: List[str], outputs: List[str], **kwargs) -> List[float]:
 
+
+
         rewards = []
         for q, a in zip(prompts, outputs):
-            feedback_prompt = f' The question is: {q}. The answer is: {a}. Is the answer to the question correct?'
+            feedback_prompt = f'Is the answer to the question correct? The question is: {q}. The answer is: {a}.'
             feedback = se_generator(feedback_prompt)[0]['generated_text']  # Assuming 'model' is your trained T5 model
             feedback = feedback.lower().strip()
             print(feedback)
@@ -168,13 +180,21 @@ def main(hparams={}):
     #########################b
 
     ds = load_dataset("json", data_files="/root/autodl-tmp/BIG-Bench-Hard/bbh/navigate.json",field="examples")['train']
-    ds_split=ds.train_test_split(test_size=0.2)
+   
     
     answer_all=ds['target']
     
     prompt_all=ds['input']
-    prompt_train=ds_split['train']['input']
-    prompt_test=ds_split['test']['input']
+    # fix the train test split
+    train_test_split_id=round(len(answer_all)*0.8)
+    
+    # ds_split=ds.train_test_split(test_size=0.2)
+    #prompt_train=ds_split['train']['input']
+    #prompt_test=ds_split['test']['input']
+    
+    
+    prompt_train=prompt_all[:train_test_split_id]
+    prompt_test=prompt_all[train_test_split_id:]
 
     
     prompt_all_cot= ['[{}] Let’ s think step by step.'.format(prompt) for prompt in prompt_all]
